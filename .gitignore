@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ignore the google api credentials file at the following location:
+auth/google-credentials.json
