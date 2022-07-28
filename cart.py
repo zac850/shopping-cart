@@ -2,40 +2,79 @@
 # https://developers.google.com/sheets/api/quickstart/python 
 # https://towardsdatascience.com/how-to-import-google-sheets-data-into-a-pandas-dataframe-using-googles-api-v4-2020-f50e84ea4530
 
-import os
-from dotenv import load_dotenv
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+# DATA SECTION
 
-#pip install gspread oauth2client
-# pip install -r requirements.txt
+products = [
+    {"id":1, "name": "Chocolate Sandwich Cookies", "department": "snacks", "aisle": "cookies cakes", "price": 3.50},
+    {"id":2, "name": "All-Seasons Salt", "department": "pantry", "aisle": "spices seasonings", "price": 4.99},
+    {"id":3, "name": "Robust Golden Unsweetened Oolong Tea", "department": "beverages", "aisle": "tea", "price": 2.49},
+    {"id":4, "name": "Smart Ones Classic Favorites Mini Rigatoni With Vodka Cream Sauce", "department": "frozen", "aisle": "frozen meals", "price": 6.99},
+    {"id":5, "name": "Green Chile Anytime Sauce", "department": "pantry", "aisle": "marinades meat preparation", "price": 7.99},
+    {"id":6, "name": "Dry Nose Oil", "department": "personal care", "aisle": "cold flu allergy", "price": 21.99},
+    {"id":7, "name": "Pure Coconut Water With Orange", "department": "beverages", "aisle": "juice nectars", "price": 3.50},
+    {"id":8, "name": "Cut Russet Potatoes Steam N' Mash", "department": "frozen", "aisle": "frozen produce", "price": 4.25},
+    {"id":9, "name": "Light Strawberry Blueberry Yogurt", "department": "dairy eggs", "aisle": "yogurt", "price": 6.50},
+    {"id":10, "name": "Sparkling Orange Juice & Prickly Pear Beverage", "department": "beverages", "aisle": "water seltzer sparkling water", "price": 2.99},
+    {"id":11, "name": "Peach Mango Juice", "department": "beverages", "aisle": "refrigerated", "price": 1.99},
+    {"id":12, "name": "Chocolate Fudge Layer Cake", "department": "frozen", "aisle": "frozen dessert", "price": 18.50},
+    {"id":13, "name": "Saline Nasal Mist", "department": "personal care", "aisle": "cold flu allergy", "price": 16.00},
+    {"id":14, "name": "Fresh Scent Dishwasher Cleaner", "department": "household", "aisle": "dish detergents", "price": 4.99},
+    {"id":15, "name": "Overnight Diapers Size 6", "department": "babies", "aisle": "diapers wipes", "price": 25.50},
+    {"id":16, "name": "Mint Chocolate Flavored Syrup", "department": "snacks", "aisle": "ice cream toppings", "price": 4.50},
+    {"id":17, "name": "Rendered Duck Fat", "department": "meat seafood", "aisle": "poultry counter", "price": 9.99},
+    {"id":18, "name": "Pizza for One Suprema Frozen Pizza", "department": "frozen", "aisle": "frozen pizza", "price": 12.50},
+    {"id":19, "name": "Gluten Free Quinoa Three Cheese & Mushroom Blend", "department": "dry goods pasta", "aisle": "grains rice dried goods", "price": 3.99},
+    {"id":20, "name": "Pomegranate Cranberry & Aloe Vera Enrich Drink", "department": "beverages", "aisle": "juice nectars", "price": 4.25}
+] # based on data from Instacart: https://www.instacart.com/datasets/grocery-shopping-2017
 
-# products=client.open("Items").sheet1
-
-load_dotenv()
-
-DOCUMENT_ID = os.getenv("GOOGLE_SHEET_ID", default="OOPS")
-SHEET_NAME = os.getenv("SHEET_NAME", default="Products-2021")
-
-# AUTHORIZATION
-# see: https://gspread.readthedocs.io/en/latest/api.html#gspread.authorize
-
-# an OS-agnostic (Windows-safe) way to reference the "auth/google-credentials.json" filepath:
-#CREDENTIALS_FILEPATH = os.path.join(os.path.dirname(__file__), "auth", "google-credentials.json")
-#  CODE errored - was looking in the amaconda env folder, not thw ~/Desktop/ one... FIX BUG!!!
-CREDENTIALS_FILEPATH = '\\auth\\google-credentials.json'
-
-AUTH_SCOPE = [
-#    "https://www.googleapis.com/auth/spreadsheets", #> Allows read/write access to the user's sheets and their properties.
-    "https://www.googleapis.com/auth/drive.file" #> Per-file access to files created or opened by the app.
-]
-
-credentials = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILEPATH, AUTH_SCOPE)
-print("CREDS:", type(credentials)) #> <class 'oauth2client.service_account.ServiceAccountCredentials'>
-
-client = gspread.authorize(credentials)
-print("CLIENT:", type(client)) #> <class 'gspread.client.Client'>
-
-
+# USD CLEANUP BIT
 def to_usd(my_price):
     return f"${my_price:,.2f}" #> $12,000.71
+
+# OTHER SETUP THINGS
+selected_products = [] 
+escape = ["X", "DONE"]  # User options to break out of loop - so program is more intuitive to more people!
+subtotal_price = 0
+tax_rate = 0.0875  # MAKE ENVIROMENT VARIABLE!
+
+# PROGRAM START
+#tax_rate = input("Enter tax rate (0.0875 for NYC): ")
+#tax_rate = float(tax_rate)
+print("Please input a product ID, or press 'X' to finalize checkout.")
+
+# ENTER ITEMS LOOP SECTION
+while True:
+    selected_id = input("  ID (or x): " )
+
+    if selected_id.upper() in escape:
+        break # break out of the while loop 
+    else:
+        matching_products = [p for p in products if str(p["id"]) == str(selected_id)]
+        matching_product = matching_products[0] # BUG this will trigger an IndexError if there are no matching products
+        selected_products.append(matching_product)
+#        selected_products ['price_displayed'] = to_usd(matching_product["price"]) BUG #https://www.guru99.com/python-dictionary-append.html
+        subtotal_price = subtotal_price + matching_product["price"]
+ 
+
+# DISPLAY ITEMS SECTION
+print("-------------------")
+print("Corner Store Bodega")
+print("-------------------")
+print("Purchases:")
+for purchase in selected_products:
+    print(" *",purchase["name"],purchase["price"])  # after making price_displayed to go through to_usd flow, change printout here
+
+
+# PRICE TOTAL & PRINT SECTION
+print("-------------------")
+subtotal_price_displayed = to_usd(subtotal_price)
+print("Subtotal:",subtotal_price_displayed)
+tax = subtotal_price * tax_rate
+tax_displayed = to_usd (tax)
+print("Tax:",tax_displayed)
+grandtotal_price = subtotal_price + tax
+grandtotal_price = to_usd (grandtotal_price)
+print("Grand Total:", grandtotal_price)
+print("-------------------")
+print("Thank you for your patronage!")
+print("-------------------")
