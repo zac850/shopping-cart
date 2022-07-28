@@ -2,6 +2,10 @@
 # https://developers.google.com/sheets/api/quickstart/python 
 # https://towardsdatascience.com/how-to-import-google-sheets-data-into-a-pandas-dataframe-using-googles-api-v4-2020-f50e84ea4530
 
+# IMPORTS
+import datetime #https://thispointer.com/add-minutes-to-current-time-in-python/
+
+
 # DATA SECTION
 
 products = [
@@ -36,6 +40,7 @@ selected_products = []
 escape = ["X", "DONE"]  # User options to break out of loop - so program is more intuitive to more people!
 subtotal_price = 0
 tax_rate = 0.0875  # MAKE ENVIROMENT VARIABLE!
+checkout_time = datetime.datetime.now() # https://www.w3schools.com/python/python_datetime.asp
 
 # PROGRAM START
 #tax_rate = input("Enter tax rate (0.0875 for NYC): ")
@@ -52,29 +57,27 @@ while True:
         matching_products = [p for p in products if str(p["id"]) == str(selected_id)]
         matching_product = matching_products[0] # BUG this will trigger an IndexError if there are no matching products
         selected_products.append(matching_product)
-#        selected_products ['price_displayed'] = to_usd(matching_product["price"]) BUG #https://www.guru99.com/python-dictionary-append.html
         subtotal_price = subtotal_price + matching_product["price"]
  
 
 # DISPLAY ITEMS SECTION
 print("-------------------")
 print("Corner Store Bodega")
+print("83rd & West End, NYC | 212.671.4602")
+print("www.shopping_cart.zacharyspitzer.com") # MAKE THIS WEBSITE!!!
 print("-------------------")
+print("Checkout Time:",(checkout_time.strftime("%a %b %d %Y, %I:%M %p")))  #https://www.w3schools.com/python/python_datetime.asp
 print("Purchases:")
 for purchase in selected_products:
-    print(" *",purchase["name"],purchase["price"])  # after making price_displayed to go through to_usd flow, change printout here
+    print(" *",purchase["name"],"("+to_usd(purchase["price"])+")") 
 
-
-# PRICE TOTAL & PRINT SECTION
-print("-------------------")
-subtotal_price_displayed = to_usd(subtotal_price)
-print("Subtotal:",subtotal_price_displayed)
+# CALCULATE TOTAL & PRINT TOTAL SECTION
 tax = subtotal_price * tax_rate
-tax_displayed = to_usd (tax)
-print("Tax:",tax_displayed)
 grandtotal_price = subtotal_price + tax
-grandtotal_price = to_usd (grandtotal_price)
-print("Grand Total:", grandtotal_price)
+print("-------------------")
+print("Subtotal:",to_usd(subtotal_price))
+print("Tax:",to_usd (tax))
+print("Grand Total:", to_usd (grandtotal_price))
 print("-------------------")
 print("Thank you for your patronage!")
 print("-------------------")
