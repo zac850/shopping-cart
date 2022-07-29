@@ -3,7 +3,10 @@
 # https://towardsdatascience.com/how-to-import-google-sheets-data-into-a-pandas-dataframe-using-googles-api-v4-2020-f50e84ea4530
 
 # IMPORTS
-import datetime #https://thispointer.com/add-minutes-to-current-time-in-python/
+import datetime
+from tkinter import Y #https://thispointer.com/add-minutes-to-current-time-in-python/
+import smtplib, ssl
+from email.message import EmailMessage
 
 
 # DATA SECTION
@@ -42,6 +45,7 @@ subtotal_price = 0
 tax_rate = 0.0875  # MAKE ENVIROMENT VARIABLE!
 checkout_time = datetime.datetime.now() # https://www.w3schools.com/python/python_datetime.asp
 
+
 # PROGRAM START
 #tax_rate = input("Enter tax rate (0.0875 for NYC): ")
 #tax_rate = float(tax_rate)
@@ -52,12 +56,17 @@ while True:
     selected_id = input("  ID (or x): " )
 
     if selected_id.upper() in escape:
-        break # break out of the while loop 
+        break  
     else:
-        matching_products = [p for p in products if str(p["id"]) == str(selected_id)]
-        matching_product = matching_products[0] # BUG this will trigger an IndexError if there are no matching products
-        selected_products.append(matching_product)
-        subtotal_price = subtotal_price + matching_product["price"]
+        try:
+            matching_products = [p for p in products if str(p["id"]) == str(selected_id)]
+            matching_product = matching_products[0] # BUG this will trigger an IndexError if there are no matching products
+            selected_products.append(matching_product)
+            subtotal_price = subtotal_price + matching_product["price"]
+
+        except IndexError:
+            print("Invalid ID - Try Again:")
+
  
 
 # DISPLAY ITEMS SECTION
@@ -81,3 +90,45 @@ print("Grand Total:", to_usd (grandtotal_price))
 print("-------------------")
 print("Thank you for your patronage!")
 print("-------------------")
+print("")
+
+# TEXT FILE RECIEPT CREATION
+make_rcpt = input("Print Reciept? (y/n): ")
+if make_rcpt.upper() == "Y":
+    filenametime = timestr = checkout_time.strftime("RCPT_%Y%m%d-%H%M%S.txt")
+    rcpt = open(filenametime, "x")      # BUG Need to get it to put the text files in the reciepts folder, not working dir...
+    rcpt.write("Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""\n""Your Purchases:""\n")
+    for purchase in selected_products:
+        rcpt.write(" * ")
+        rcpt.write(purchase["name"])
+        rcpt.write("  (")
+        rcpt.write(to_usd(purchase["price"]))
+        rcpt.write(")""\n")
+    rcpt.write("\n""-------------------""\n""Subtotal: ")
+    rcpt.write(to_usd(subtotal_price))
+    rcpt.write("\n""Tax: ")
+    rcpt.write(to_usd (tax))
+    rcpt.write("\n""Grand Total: ")
+    rcpt.write(to_usd (grandtotal_price))
+    rcpt.write("\n""-------------------""\n""Thank you for your patronage!""\n""-------------------")
+    rcpt.close()   #In the real world, os.startfile"filenametime",print) and then on a linux machine with the folder hirarchy it should print...
+
+# EMAIL RECIEPT  https://docs.python.org/3/library/email.examples.html
+email_rcpt = input("eMail Reciept? (y/n): ")
+if email_rcpt.upper() == "Y":   #https://realpython.com/python-send-email/
+    port = 465
+    smtp_server = 'mail.zacharyspitzer.com'
+    sender_email = 'receipt@zacharyspitzer.com'
+    receiver_email = input("Enter customer email: ")
+    password = "shopping_cart"  # BUG use getpass module / function
+    message = """\
+    Subject: Your Reciept
+
+    This is a test email. """
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, message)
+
+print("I hope that email sent... it probably didn't...")

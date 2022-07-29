@@ -26,8 +26,8 @@ Now navigate to the folder the game download exists in (should be your desktop, 
 cd ~/Desktop/shopping-cart
  ```
 
-In the terminal command line, run:
-```
-python quickstart.py
-```
+Run requirments file
+
+Bit about enviroment variable for tax rate & email password...
+Bit about json to access google drive file
 
