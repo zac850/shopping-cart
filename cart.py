@@ -5,12 +5,13 @@
 # IMPORTS
 import datetime
 from tkinter import Y #https://thispointer.com/add-minutes-to-current-time-in-python/
-import smtplib, ssl
-from email.message import EmailMessage
 import os
 from dotenv import load_dotenv
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
+
 
 # LOAD ENVIROMENT VARS
 load_dotenv()
@@ -116,9 +117,9 @@ response = write_sheet.insert_row(new_values, next_row_number)
 # TEXT FILE RECIEPT CREATION
 make_rcpt = input("Generate Text Reciept to print? (y/n): ")
 if make_rcpt.upper() == "Y":
-    filenametime = timestr = checkout_time.strftime("Reciept_%Y%m%d-%H%M%S")
-    rcpt = open(filenametime, "x")      # BUG Need to get it to put the text files in the reciepts folder, not working dir...
-    rcpt.write("Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""\n""Your Purchases:""\n")
+    filenametime = timestr = checkout_time.strftime("Reciept_%Y%m%d-%H%M%S.txt")
+    rcpt = open(os.path.join(os.path.dirname(__file__), "reciepts", filenametime), "x")      # BUG Need to get it to put the text files in the reciepts folder, not working dir...
+    rcpt.write("        Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""www.shopping_cart.zacharyspitzer.com""\n""\n""Your Purchases:""\n")
     for purchase in selected_products:
         rcpt.write(" * ")
         rcpt.write(purchase["name"])
@@ -134,20 +135,28 @@ if make_rcpt.upper() == "Y":
     rcpt.write("\n""-------------------""\n""Thank you for your patronage!""\n""-------------------")
     rcpt.close()   #In the real world, os.startfile"filenametime",print) and then on a linux machine with the folder hirarchy it should print...
 
-# EMAIL RECIEPT  https://docs.python.org/3/library/email.examples.html
-# email_rcpt = input("eMail Reciept? (y/n): ")
-# if email_rcpt.upper() == "Y":   #https://realpython.com/python-send-email/
-#     port = 465
-#     smtp_server = 'mail.zacharyspitzer.com'
-#     sender_email = 'receipt@zacharyspitzer.com'
-#     receiver_email = input("Enter customer email: ")
-#     password = "shopping_cart"  # BUG use getpass module / function
-#     message = """\
-#     Subject: Your Reciept
+ #EMAIL RECIEPT SECTION
+email_rcpt = input("eMail Reciept? (y/n): ")
+if email_rcpt.upper() == "Y": 
+    customer_email = input("Enter customer email address: ")
+    SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", default="OOPS, please set env var called 'SENDGRID_API_KEY'")
+    SENDER_ADDRESS = os.getenv("SENDER_ADDRESS", default="OOPS, please set env var called 'SENDER_ADDRESS'")
 
-#     This is a test email. """
+    client = SendGridAPIClient(SENDGRID_API_KEY) #> <class 'sendgrid.sendgrid.SendGridAPIClient>
 
-#     context = ssl.create_default_context()
-#     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-#         server.login(sender_email, password)
-#         server.sendmail(sender_email, receiver_email, message)
+    subject = "Your Receipt from Corner Store Bodega"
+
+    # html_content = "Thank you for shopping at our store!<br>SubTotal"+subtotal_price+"<br>Tax:"+tax+"<br>Grand Total:"+grandtotal_price
+    html_content = "This is a receiept.<br>We need to figure out how to get content into it.<br><br>One step at a time."
+    message = Mail(from_email=SENDER_ADDRESS, to_emails=customer_email, subject=subject, html_content=html_content)
+    
+    try:
+        response = client.send(message)
+        # print("RESPONSE:", type(response)) #> <class 'python_http_client.client.Response'>
+        # print(response.status_code) #> 202 indicates SUCCESS
+        # print(response.body)
+        # print(response.headers)
+
+    except Exception as err:
+        print(type(err))
+        print(err)
