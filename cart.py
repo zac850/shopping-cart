@@ -7,48 +7,54 @@ import datetime
 from tkinter import Y #https://thispointer.com/add-minutes-to-current-time-in-python/
 import smtplib, ssl
 from email.message import EmailMessage
+import os
+from dotenv import load_dotenv
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# LOAD ENVIROMENT VARS
+load_dotenv()
+tax_rate = float((os.getenv('TAX_RATE')))
 
 
 # DATA SECTION
+DOCUMENT_ID = os.getenv("GOOGLE_SHEET_ID", default="1Cj7pfKWXZjLf2b_fwuYioMIq_S4e1zh7yaUeHZfyEiw")
+READ_SHEET = os.getenv("PRODUCTS_SHEET_NAME", default="Items")
+WRITE_SHEET = os.getenv("RECORDS_SHEET_NAME", default="Transactions")
 
-products = [
-    {"id":1, "name": "Chocolate Sandwich Cookies", "department": "snacks", "aisle": "cookies cakes", "price": 3.50},
-    {"id":2, "name": "All-Seasons Salt", "department": "pantry", "aisle": "spices seasonings", "price": 4.99},
-    {"id":3, "name": "Robust Golden Unsweetened Oolong Tea", "department": "beverages", "aisle": "tea", "price": 2.49},
-    {"id":4, "name": "Smart Ones Classic Favorites Mini Rigatoni With Vodka Cream Sauce", "department": "frozen", "aisle": "frozen meals", "price": 6.99},
-    {"id":5, "name": "Green Chile Anytime Sauce", "department": "pantry", "aisle": "marinades meat preparation", "price": 7.99},
-    {"id":6, "name": "Dry Nose Oil", "department": "personal care", "aisle": "cold flu allergy", "price": 21.99},
-    {"id":7, "name": "Pure Coconut Water With Orange", "department": "beverages", "aisle": "juice nectars", "price": 3.50},
-    {"id":8, "name": "Cut Russet Potatoes Steam N' Mash", "department": "frozen", "aisle": "frozen produce", "price": 4.25},
-    {"id":9, "name": "Light Strawberry Blueberry Yogurt", "department": "dairy eggs", "aisle": "yogurt", "price": 6.50},
-    {"id":10, "name": "Sparkling Orange Juice & Prickly Pear Beverage", "department": "beverages", "aisle": "water seltzer sparkling water", "price": 2.99},
-    {"id":11, "name": "Peach Mango Juice", "department": "beverages", "aisle": "refrigerated", "price": 1.99},
-    {"id":12, "name": "Chocolate Fudge Layer Cake", "department": "frozen", "aisle": "frozen dessert", "price": 18.50},
-    {"id":13, "name": "Saline Nasal Mist", "department": "personal care", "aisle": "cold flu allergy", "price": 16.00},
-    {"id":14, "name": "Fresh Scent Dishwasher Cleaner", "department": "household", "aisle": "dish detergents", "price": 4.99},
-    {"id":15, "name": "Overnight Diapers Size 6", "department": "babies", "aisle": "diapers wipes", "price": 25.50},
-    {"id":16, "name": "Mint Chocolate Flavored Syrup", "department": "snacks", "aisle": "ice cream toppings", "price": 4.50},
-    {"id":17, "name": "Rendered Duck Fat", "department": "meat seafood", "aisle": "poultry counter", "price": 9.99},
-    {"id":18, "name": "Pizza for One Suprema Frozen Pizza", "department": "frozen", "aisle": "frozen pizza", "price": 12.50},
-    {"id":19, "name": "Gluten Free Quinoa Three Cheese & Mushroom Blend", "department": "dry goods pasta", "aisle": "grains rice dried goods", "price": 3.99},
-    {"id":20, "name": "Pomegranate Cranberry & Aloe Vera Enrich Drink", "department": "beverages", "aisle": "juice nectars", "price": 4.25}
-] # based on data from Instacart: https://www.instacart.com/datasets/grocery-shopping-2017
+# AUTHORIZATION
+# see: https://gspread.readthedocs.io/en/latest/api.html#gspread.authorize
+
+# an OS-agnostic (Windows-safe) way to reference the "auth/google-credentials.json" filepath:
+CREDENTIALS_FILEPATH = os.path.join(os.path.dirname(__file__), "auth", "google-credentials.json")
+
+AUTH_SCOPE = [
+    "https://www.googleapis.com/auth/spreadsheets", #> Allows read/write access to the user's sheets and their properties.
+    "https://www.googleapis.com/auth/drive.file" #> Per-file access to files created or opened by the app.
+]
+
+credentials = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS_FILEPATH, AUTH_SCOPE)
+client = gspread.authorize(credentials)
+
+doc = client.open_by_key(DOCUMENT_ID)
+read_sheet = doc.worksheet(READ_SHEET)
+write_sheet = doc.worksheet(WRITE_SHEET)
+
+products = read_sheet.get_all_records()
 
 # USD CLEANUP BIT
 def to_usd(my_price):
     return f"${my_price:,.2f}" #> $12,000.71
 
 # OTHER SETUP THINGS
-selected_products = [] 
 escape = ["X", "DONE"]  # User options to break out of loop - so program is more intuitive to more people!
-subtotal_price = 0
-tax_rate = 0.0875  # MAKE ENVIROMENT VARIABLE!
+# tax_rate = 0.0875  # ENVIROMENT VARIABLE NOW
+
+
+# PROGRAM START - things that have to happen each loop
 checkout_time = datetime.datetime.now() # https://www.w3schools.com/python/python_datetime.asp
-
-
-# PROGRAM START
-#tax_rate = input("Enter tax rate (0.0875 for NYC): ")
-#tax_rate = float(tax_rate)
+subtotal_price = 0
+selected_products = [] 
 print("Please input a product ID, or press 'X' to finalize checkout.")
 
 # ENTER ITEMS LOOP SECTION
@@ -60,14 +66,12 @@ while True:
     else:
         try:
             matching_products = [p for p in products if str(p["id"]) == str(selected_id)]
-            matching_product = matching_products[0] # BUG this will trigger an IndexError if there are no matching products
+            matching_product = matching_products[0] 
             selected_products.append(matching_product)
             subtotal_price = subtotal_price + matching_product["price"]
 
         except IndexError:
             print("Invalid ID - Try Again:")
-
- 
 
 # DISPLAY ITEMS SECTION
 print("-------------------")
@@ -92,10 +96,27 @@ print("Thank you for your patronage!")
 print("-------------------")
 print("")
 
+# UPLOAD TRANSACTION FOR ACCOUNTANT - adapted from Prof's code
+google_checkout_date = timestr = checkout_time.strftime("%m/%d/%y")
+google_checkout_time = timestr = checkout_time.strftime("%H:%M:%S")
+
+new_row = {
+    "date":google_checkout_date,
+    "time":google_checkout_time,
+    "subtotal":to_usd(subtotal_price),
+    "tax":to_usd(tax),
+    "grand total":to_usd(grandtotal_price)
+}
+new_values = list(new_row.values()) 
+rows = write_sheet.get_all_records()
+next_row_number = len(rows) + 2
+response = write_sheet.insert_row(new_values, next_row_number)
+
+
 # TEXT FILE RECIEPT CREATION
-make_rcpt = input("Print Reciept? (y/n): ")
+make_rcpt = input("Generate Text Reciept to print? (y/n): ")
 if make_rcpt.upper() == "Y":
-    filenametime = timestr = checkout_time.strftime("RCPT_%Y%m%d-%H%M%S.txt")
+    filenametime = timestr = checkout_time.strftime("Reciept_%Y%m%d-%H%M%S")
     rcpt = open(filenametime, "x")      # BUG Need to get it to put the text files in the reciepts folder, not working dir...
     rcpt.write("Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""\n""Your Purchases:""\n")
     for purchase in selected_products:
@@ -114,21 +135,19 @@ if make_rcpt.upper() == "Y":
     rcpt.close()   #In the real world, os.startfile"filenametime",print) and then on a linux machine with the folder hirarchy it should print...
 
 # EMAIL RECIEPT  https://docs.python.org/3/library/email.examples.html
-email_rcpt = input("eMail Reciept? (y/n): ")
-if email_rcpt.upper() == "Y":   #https://realpython.com/python-send-email/
-    port = 465
-    smtp_server = 'mail.zacharyspitzer.com'
-    sender_email = 'receipt@zacharyspitzer.com'
-    receiver_email = input("Enter customer email: ")
-    password = "shopping_cart"  # BUG use getpass module / function
-    message = """\
-    Subject: Your Reciept
+# email_rcpt = input("eMail Reciept? (y/n): ")
+# if email_rcpt.upper() == "Y":   #https://realpython.com/python-send-email/
+#     port = 465
+#     smtp_server = 'mail.zacharyspitzer.com'
+#     sender_email = 'receipt@zacharyspitzer.com'
+#     receiver_email = input("Enter customer email: ")
+#     password = "shopping_cart"  # BUG use getpass module / function
+#     message = """\
+#     Subject: Your Reciept
 
-    This is a test email. """
+#     This is a test email. """
 
-    context = ssl.create_default_context()
-    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
-        server.login(sender_email, password)
-        server.sendmail(sender_email, receiver_email, message)
-
-print("I hope that email sent... it probably didn't...")
+#     context = ssl.create_default_context()
+#     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+#         server.login(sender_email, password)
+#         server.sendmail(sender_email, receiver_email, message)

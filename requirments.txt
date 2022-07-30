@@ -2,4 +2,4 @@
 gspread oauth2client
 python-dotenv
 gspread
-# API key: AIzaSyD0yxrasDrPPUI_MOBZCb3D_H1yk5oqcQc
+sendgrid
