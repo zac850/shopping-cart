@@ -19,9 +19,10 @@ tax_rate = float((os.getenv('TAX_RATE')))
 
 
 # DATA SECTION
-DOCUMENT_ID = os.getenv("GOOGLE_SHEET_ID", default="1Cj7pfKWXZjLf2b_fwuYioMIq_S4e1zh7yaUeHZfyEiw")
-READ_SHEET = os.getenv("PRODUCTS_SHEET_NAME", default="Items")
-WRITE_SHEET = os.getenv("RECORDS_SHEET_NAME", default="Transactions")
+DOCUMENT_ID = os.getenv("GOOGLE_SHEET_ID", default="secured")
+READ_SHEET = os.getenv("PRODUCTS_SHEET_NAME", default="secured")
+WRITE_SHEET = os.getenv("RECORDS_SHEET_NAME", default="secured")
+EMAILS_SHEET = os.getenv("EMAILS_SHEET_NAME", default="secured")
 
 # AUTHORIZATION
 # see: https://gspread.readthedocs.io/en/latest/api.html#gspread.authorize
@@ -40,6 +41,7 @@ client = gspread.authorize(credentials)
 doc = client.open_by_key(DOCUMENT_ID)
 read_sheet = doc.worksheet(READ_SHEET)
 write_sheet = doc.worksheet(WRITE_SHEET)
+emails_sheet = doc.worksheet(EMAILS_SHEET)
 
 products = read_sheet.get_all_records()
 
@@ -142,15 +144,28 @@ while True:
         customer_email = input("Enter customer email address: ")
         SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", default="OOPS, please set env var called 'SENDGRID_API_KEY'")
         SENDER_ADDRESS = os.getenv("SENDER_ADDRESS", default="OOPS, please set env var called 'SENDER_ADDRESS'")
+        SENDGRID_TEMPLATE_ID = os.getenv("SENDGRID_TEMPLATE_ID", default="OOPS, please set env var called 'SENDGRID_TEMPLATE_ID'")
 
-        client = SendGridAPIClient(SENDGRID_API_KEY) #> <class 'sendgrid.sendgrid.SendGridAPIClient>
+        email_template_data = {
+            "google_checkout_date":google_checkout_date,
+            "google_checkout_time":google_checkout_time,
+            "tax":to_usd(tax),
+            "subtotal_price":to_usd(subtotal_price),
+            "grandtotal_price":to_usd(grandtotal_price),
+            # "purchases":[
+            # for purchase in selected_products:
+            #     {"item":purchase["name"],"price":to_usd(purchase["price"]}
+        #    ]
+        }
 
-        subject = "Your Receipt from Corner Store Bodega"
+        client = SendGridAPIClient(SENDGRID_API_KEY)
+        # print("CLIENT:", type(client))
 
-        # html_content = "Thank you for shopping at our store!<br>SubTotal"+subtotal_price+"<br>Tax:"+tax+"<br>Grand Total:"+grandtotal_price
-        html_content = "This is a receiept.<br>We need to figure out how to get content into it.<br><br>One step at a time."
-        message = Mail(from_email=SENDER_ADDRESS, to_emails=customer_email, subject=subject, html_content=html_content)
-        
+        message = Mail(from_email=SENDER_ADDRESS, to_emails=customer_email)
+        message.template_id = SENDGRID_TEMPLATE_ID
+        message.dynamic_template_data = email_template_data
+        # print("MESSAGE:", type(message))
+
         try:
             response = client.send(message)
             # print("RESPONSE:", type(response)) #> <class 'python_http_client.client.Response'>
@@ -161,6 +176,19 @@ while True:
         except Exception as err:
             print(type(err))
             print(err)
+
+    # SAVE EMAIL ADDRESS TO GOOGLE SHEET FOR MARKETING
+        save_email = input("Add customer to email list? (y/n): ")
+        if save_email.upper() == "Y":
+            new_email_row = {
+                "date":google_checkout_date,
+                "time":google_checkout_time,
+                "email address":customer_email
+            }
+            new_email_values = list(new_email_row.values()) 
+            rows_email = emails_sheet.get_all_records()
+            next_email_row_number = len(rows_email) + 2
+            response_email = emails_sheet.insert_row(new_email_values, next_email_row_number)
 
 # ANOTHER CUSTOMER? TO LOOP OR NOT?
     next_customer = input("Check out next customer? (y/n): ")
