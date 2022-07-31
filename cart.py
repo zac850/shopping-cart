@@ -1,10 +1,5 @@
-# for how to connect google & python:
-# https://developers.google.com/sheets/api/quickstart/python 
-# https://towardsdatascience.com/how-to-import-google-sheets-data-into-a-pandas-dataframe-using-googles-api-v4-2020-f50e84ea4530
-
 # IMPORTS
 import datetime
-from tkinter import Y #https://thispointer.com/add-minutes-to-current-time-in-python/
 import os
 from dotenv import load_dotenv
 import gspread
@@ -13,18 +8,15 @@ from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
 
-# LOAD ENVIROMENT VARS
+# LOAD ENVIROMENT VARS & DATA SECTION
 load_dotenv()
 tax_rate = float((os.getenv('TAX_RATE')))
-
-
-# DATA SECTION
 DOCUMENT_ID = os.getenv("GOOGLE_SHEET_ID", default="secured")
 READ_SHEET = os.getenv("PRODUCTS_SHEET_NAME", default="secured")
 WRITE_SHEET = os.getenv("RECORDS_SHEET_NAME", default="secured")
 EMAILS_SHEET = os.getenv("EMAILS_SHEET_NAME", default="secured")
 
-# AUTHORIZATION
+# AUTHORIZATION - code from Prof
 # see: https://gspread.readthedocs.io/en/latest/api.html#gspread.authorize
 
 # an OS-agnostic (Windows-safe) way to reference the "auth/google-credentials.json" filepath:
@@ -45,7 +37,7 @@ emails_sheet = doc.worksheet(EMAILS_SHEET)
 
 products = read_sheet.get_all_records()
 
-# USD CLEANUP BIT
+# USD CLEANUP BIT - Code from Prof
 def to_usd(my_price):
     return f"${my_price:,.2f}" #> $12,000.71
 
@@ -59,9 +51,10 @@ while True:
     checkout_time = datetime.datetime.now() # https://www.w3schools.com/python/python_datetime.asp
     subtotal_price = 0
     selected_products = [] 
+    email_purchases = ""  #clear the string for the next customer
     print("Please input a product ID, or press 'X' to finalize checkout.")
 
-# ENTER ITEMS LOOP SECTION
+# ENTER ITEMS LOOP SECTION - Code from Prof
     while True:
         selected_id = input("  ID (or x): " )
 
@@ -81,7 +74,7 @@ while True:
     print("-------------------")
     print("Corner Store Bodega")
     print("83rd & West End, NYC | 212.671.4602")
-    print("www.shopping_cart.zacharyspitzer.com") # MAKE THIS WEBSITE!!!
+    print("www.shoppingcart.zacharyspitzer.com")
     print("-------------------")
     print("Checkout Time:",(checkout_time.strftime("%a %b %d %Y, %I:%M %p")))  #https://www.w3schools.com/python/python_datetime.asp
     print("Purchases:")
@@ -117,12 +110,12 @@ while True:
     response = write_sheet.insert_row(new_values, next_row_number)
 
 
-# TEXT FILE RECIEPT CREATION
+# TEXT FILE RECIEPT CREATION - code adapted from prof, google, and stack overflow
     make_rcpt = input("Generate Text Reciept to print? (y/n): ")
     if make_rcpt.upper() == "Y":
-        filenametime = timestr = checkout_time.strftime("Reciept_%Y%m%d-%H%M%S.txt")
-        rcpt = open(os.path.join(os.path.dirname(__file__), "reciepts", filenametime), "x")      # BUG Need to get it to put the text files in the reciepts folder, not working dir...
-        rcpt.write("        Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""www.shopping_cart.zacharyspitzer.com""\n""\n""Your Purchases:""\n")
+        filenametime = timestr = checkout_time.strftime("Reciept_%Y_%m_%d-%H%M%S.txt")
+        rcpt = open(os.path.join(os.path.dirname(__file__), "reciepts", filenametime), "x")
+        rcpt.write("        Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""www.shoppingcart.zacharyspitzer.com""\n""\n""Your Purchases:""\n")
         for purchase in selected_products:
             rcpt.write(" * ")
             rcpt.write(purchase["name"])
@@ -138,13 +131,15 @@ while True:
         rcpt.write("\n""-------------------""\n""Thank you for your patronage!""\n""-------------------")
         rcpt.close()   #In the real world, os.startfile"filenametime",print) and then on a linux machine with the folder hirarchy it should print...
 
-#EMAIL RECIEPT SECTION
+#EMAIL RECIEPT SECTION - code adapted from prof
     email_rcpt = input("eMail Reciept? (y/n): ")
     if email_rcpt.upper() == "Y": 
         customer_email = input("Enter customer email address: ")
         SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", default="OOPS, please set env var called 'SENDGRID_API_KEY'")
         SENDER_ADDRESS = os.getenv("SENDER_ADDRESS", default="OOPS, please set env var called 'SENDER_ADDRESS'")
         SENDGRID_TEMPLATE_ID = os.getenv("SENDGRID_TEMPLATE_ID", default="OOPS, please set env var called 'SENDGRID_TEMPLATE_ID'")
+        for purchase in selected_products:
+            email_purchases = email_purchases+("<li>"+purchase["name"]+" ("+to_usd(purchase["price"])+")</li>")
 
         email_template_data = {
             "google_checkout_date":google_checkout_date,
@@ -152,10 +147,7 @@ while True:
             "tax":to_usd(tax),
             "subtotal_price":to_usd(subtotal_price),
             "grandtotal_price":to_usd(grandtotal_price),
-            # "purchases":[
-            # for purchase in selected_products:
-            #     {"item":purchase["name"],"price":to_usd(purchase["price"]}
-        #    ]
+            "purchases":email_purchases
         }
 
         client = SendGridAPIClient(SENDGRID_API_KEY)
@@ -177,7 +169,7 @@ while True:
             print(type(err))
             print(err)
 
-    # SAVE EMAIL ADDRESS TO GOOGLE SHEET FOR MARKETING
+    # SAVE EMAIL ADDRESS TO GOOGLE SHEET FOR MARKETING - adapted from above code adapted from Prof
         save_email = input("Add customer to email list? (y/n): ")
         if save_email.upper() == "Y":
             new_email_row = {
@@ -190,7 +182,7 @@ while True:
             next_email_row_number = len(rows_email) + 2
             response_email = emails_sheet.insert_row(new_email_values, next_email_row_number)
 
-# ANOTHER CUSTOMER? TO LOOP OR NOT?
+# ANOTHER CUSTOMER? TO LOOP OR NOT TO LOOP, THAT IS THE QUESTION?
     next_customer = input("Check out next customer? (y/n): ")
     if next_customer.upper() != "Y":
         print("Thanks for being a great employee!")
