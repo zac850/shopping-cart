@@ -20,7 +20,7 @@ Next, activate the virtural enviroment you just made:
  conda activate shopping-cart
  ```
 
-Now navigate to the folder the program download exists in (should be your desktop, if you followed step 1):
+Now navigate to the folder the program download exists in (should be your desktop, if you followed step 1) (if on windows, use \ instead of /):
 
  ```sh
 cd ~/Desktop/shopping-cart
@@ -45,7 +45,7 @@ To run the program, in your command line, run:
 python cart.py
 ```
 
-To check out a customer, enter the product ID of the item a customer wishes to purchase, then press ENTER (or return). Continue entering all items the customer wishes to purchase.
+To check out a customer, enter the product ID of the item a customer wishes to purchase, then press ENTER (return). Continue entering all items the customer wishes to purchase.
 
 When all items are entered, press X (or type done) to generate the reciept. The sub total, tax, and grand total will be displayed on the screen, as well as the items being purchased.
 
@@ -72,4 +72,4 @@ To modify the tax rate, open the .env file and modify the line
 ```sh
 TAX_RATE = 0.0875
 ```
-to the correct tax rate. 0.0875 is 8.75%
+to the correct tax rate.

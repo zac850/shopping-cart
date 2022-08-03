@@ -2,5 +2,4 @@
 gspread
 oauth2client
 python-dotenv
-gspread
 sendgrid

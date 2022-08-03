@@ -1,0 +1,1 @@
+Drag provided .json file into this folder

@@ -133,4 +133,4 @@ dmypy.json
 
 # Other ignores for this project
 .ds_store
-reciepts/*.txt
+reciepts/Reciept*.txt

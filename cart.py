@@ -43,6 +43,7 @@ def to_usd(my_price):
 
 # OTHER SETUP THINGS
 escape = ["X", "DONE"]  # User options to break out of loop - so program is more intuitive to more people!
+yes = ["Y", "YES"]  #  So user can answer yes with y or yes
 # tax_rate = 0.0875  # ENVIROMENT VARIABLE NOW
 
 #PROGRAM LOOP POINT FOR MULTIPLE CUSTOMERS
@@ -112,7 +113,7 @@ while True:
 
 # TEXT FILE RECIEPT CREATION - code adapted from prof, google, and stack overflow
     make_rcpt = input("Generate Text Reciept to print? (y/n): ")
-    if make_rcpt.upper() == "Y":
+    if make_rcpt.upper() in yes:
         filenametime = timestr = checkout_time.strftime("Reciept_%Y_%m_%d-%H%M%S.txt")
         rcpt = open(os.path.join(os.path.dirname(__file__), "reciepts", filenametime), "x")
         rcpt.write("        Corner Store Bodega""\n""83rd & West End, NYC | 212.671.4602""\n""www.shoppingcart.zacharyspitzer.com""\n""\n""Your Purchases:""\n")
@@ -133,7 +134,8 @@ while True:
 
 #EMAIL RECIEPT SECTION - code adapted from prof
     email_rcpt = input("eMail Reciept? (y/n): ")
-    if email_rcpt.upper() == "Y": 
+    if email_rcpt.upper() in yes: 
+        email_checkout_time = timestr = checkout_time.strftime("%I:%M:%S %p")
         customer_email = input("Enter customer email address: ")
         SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", default="OOPS, please set env var called 'SENDGRID_API_KEY'")
         SENDER_ADDRESS = os.getenv("SENDER_ADDRESS", default="OOPS, please set env var called 'SENDER_ADDRESS'")
@@ -143,7 +145,7 @@ while True:
 
         email_template_data = {
             "google_checkout_date":google_checkout_date,
-            "google_checkout_time":google_checkout_time,
+            "google_checkout_time":email_checkout_time,
             "tax":to_usd(tax),
             "subtotal_price":to_usd(subtotal_price),
             "grandtotal_price":to_usd(grandtotal_price),
@@ -171,7 +173,7 @@ while True:
 
     # SAVE EMAIL ADDRESS TO GOOGLE SHEET FOR MARKETING - adapted from above code adapted from Prof
         save_email = input("Add customer to email list? (y/n): ")
-        if save_email.upper() == "Y":
+        if save_email.upper() in yes:
             new_email_row = {
                 "date":google_checkout_date,
                 "time":google_checkout_time,
@@ -184,7 +186,8 @@ while True:
 
 # ANOTHER CUSTOMER? TO LOOP OR NOT TO LOOP, THAT IS THE QUESTION?
     next_customer = input("Check out next customer? (y/n): ")
-    if next_customer.upper() != "Y":
+    if next_customer.upper() not in yes:
+        print("")
         print("Thanks for being a great employee!")
         print("")
         break
