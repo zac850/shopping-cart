@@ -32,12 +32,10 @@ pip install -r requirements.txt
 ```
 
 ### Enviroment Variables
-The developer, after signing the contract, will provide a .env file that includes, among other things, the API keys for the google sheet integration, and email integration. This .env folder must be copied into the main shopping_cart folder. 
+The developer, after signing the contract, will provide a .env file that includes, among other things, the API keys for the google sheet integration, and email integration. **This .env folder must be copied into the main shopping_cart folder.** 
 
-The developer will also provide a .json file for the google sheet integration. This must be named and located in:
-```sh
-shopping_cart/auth/google-credentials.json
-```
+The developer will also provide a .json file for the google sheet integration. **This .json must be named and located in: 
+shopping_cart/auth/google-credentials.json**
 
 # Operation
 To run the program, in your command line, run:
@@ -72,4 +70,4 @@ To modify the tax rate, open the .env file and modify the line
 ```sh
 TAX_RATE = 0.0875
 ```
-to the correct tax rate.
+to the correct tax rate. You may need to view hidden items to see the .env file (shift-command-period on a mac).
